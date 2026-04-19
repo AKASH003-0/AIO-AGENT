@@ -1,24 +1,14 @@
-export async function streamMessage(message, sessionId = "default_session", onChunk, imageBase64 = null) {
+export async function streamMessage(message, sessionId = "default_session", onChunk) {
     try {
         const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
         if (!API_KEY) {
-            onChunk(" [AUTH ERROR]: Key not found.");
+            onChunk(" [AUTH ERROR]: Key not detected.");
             return;
         }
 
-        // Updated Model Names (Post-Deprecation)
-        const model = imageBase64 ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile";
-        
-        let userContent;
-        if (imageBase64) {
-            userContent = [
-                { type: "text", text: message || "Analyze." },
-                { type: "image_url", image_url: { url: imageBase64 } }
-            ];
-        } else {
-            userContent = String(message);
-        }
+        // Use the absolute FASTEST model in the world (Sub-second responses)
+        const model = "llama-3.1-8b-instant";
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
@@ -28,16 +18,16 @@ export async function streamMessage(message, sessionId = "default_session", onCh
             },
             body: JSON.stringify({
                 model: model,
-                messages: [{ role: "user", content: userContent }],
+                messages: [{ role: "user", content: message }],
                 stream: true,
-                temperature: 0.1
+                temperature: 0.6,
+                max_tokens: 1024
             })
         });
 
         if (!response.ok) {
             const errBody = await response.json();
-            const detailedError = errBody.error?.message || "Unknown error";
-            onChunk(` [GROQ ERROR]: ${detailedError}`);
+            onChunk(` [ERROR]: ${errBody.error?.message || "Server issue"}`);
             return;
         }
 
@@ -63,6 +53,6 @@ export async function streamMessage(message, sessionId = "default_session", onCh
             }
         }
     } catch (err) {
-        onChunk(` [CONNECTION ERROR]: ${err.message}`);
+        onChunk(` [OFFLINE]: Connection lost.`);
     }
 }

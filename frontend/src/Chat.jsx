@@ -5,12 +5,10 @@ import './index.css';
 export default function Chat() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
-    const [selectedImage, setSelectedImage] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
     const [thinking, setThinking] = useState(false);
     const [voiceEnabled, setVoiceEnabled] = useState(false);
     const endOfMessagesRef = useRef(null);
-    const fileInputRef = useRef(null);
 
     const scrollToBottom = () => {
         endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -20,45 +18,14 @@ export default function Chat() {
         scrollToBottom();
     }, [messages, isTyping, thinking]);
 
-    // STARK UPGRADE: Automatic Image Compressor
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                // Resize image to max 800px width for fast AI processing
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800;
-                const scaleSize = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scaleSize;
-
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                // Convert to compressed JPG
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                setSelectedImage(compressedBase64);
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!input.trim() && !selectedImage) return;
-        if (isTyping) return;
+        if (!input.trim() || isTyping) return;
 
         const userMsg = input.trim();
-        const currentImage = selectedImage;
         setInput('');
-        setSelectedImage(null);
         
-        setMessages(prev => [...prev, { role: 'user', content: userMsg, image: currentImage }]);
+        setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
         setIsTyping(true);
         setThinking(true);
 
@@ -66,7 +33,7 @@ export default function Chat() {
         setMessages(prev => [...prev, { role: 'assistant', content: "" }]);
 
         try {
-            await streamMessage(userMsg || "Please describe this image in detail.", "default_session", (chunk) => {
+            await streamMessage(userMsg, "default_session", (chunk) => {
                 setThinking(false);
                 currentAssistantResponse += chunk;
                 
@@ -78,14 +45,14 @@ export default function Chat() {
                     };
                     return newMessages;
                 });
-            }, currentImage);
+            });
         } catch (error) {
             setThinking(false);
             setMessages(prev => {
                 const newMessages = [...prev];
                 newMessages[newMessages.length - 1] = {
                     role: 'assistant',
-                    content: " [SIGNAL ERROR]: Neural link failed. Check your API settings."
+                    content: " [SIGNAL ERROR]: Connection interrupted."
                 };
                 return newMessages;
             });
@@ -120,9 +87,6 @@ export default function Chat() {
                     <div key={idx} className={`message ${msg.role}`}>
                         <div className="avatar">{msg.role === 'user' ? 'STARK' : 'J.A.R.V.I.S'}</div>
                         <div className="content">
-                            {msg.image && (
-                                <img src={msg.image} alt="Upload" style={{ maxWidth: '100%', borderRadius: '4px', marginBottom: '10px', border: '1px solid var(--stark-blue)' }} />
-                            )}
                             <div className="text-content">{msg.content}</div>
                             {msg.role === 'assistant' && isTyping && idx === messages.length - 1 && !thinking && (
                                 <span className="blinking-cursor"></span>
@@ -142,27 +106,7 @@ export default function Chat() {
             
             <form onSubmit={handleSubmit} className="chat-input-area">
                 <div className="chat-input-form-inner">
-                    {selectedImage && (
-                        <div className="image-preview-bubble">
-                            <img src={selectedImage} alt="Preview" />
-                            <button onClick={() => setSelectedImage(null)}>×</button>
-                        </div>
-                    )}
                     <div className="input-wrapper">
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            style={{ display: 'none' }} 
-                            ref={fileInputRef}
-                            onChange={handleImageUpload}
-                        />
-                        <button 
-                            type="button" 
-                            className="upload-btn"
-                            onClick={() => fileInputRef.current.click()}
-                        >
-                            +
-                        </button>
                         <input 
                             type="text" 
                             value={input}
@@ -171,7 +115,7 @@ export default function Chat() {
                             autoFocus
                             disabled={isTyping}
                         />
-                        <button type="submit" disabled={isTyping || (!input.trim() && !selectedImage)}>
+                        <button type="submit" disabled={isTyping || !input.trim()}>
                             EXECUTE
                         </button>
                     </div>
