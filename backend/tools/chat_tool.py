@@ -1,0 +1,28 @@
+import json
+from memory import build_messages, add_message
+from ollama_client import execute_ollama_stream
+
+def stream_chat(user_message: str, session_id: str):
+    """The standard chat utility utilizing context memory."""
+    messages = build_messages(session_id, user_message)
+    response_stream = execute_ollama_stream(messages)
+    
+    if not response_stream:
+        yield " [System Offline. Chat component failed.]"
+        return
+        
+    full_response = ""
+    for line in response_stream.iter_lines():
+        if line:
+            chunk = json.loads(line)
+            if "message" in chunk and "content" in chunk["message"]:
+                token = chunk["message"]["content"]
+                full_response += token
+                yield token
+                
+    add_message(session_id, "user", user_message)
+    add_message(session_id, "assistant", full_response)
+    try:
+        print(f"[MODEL]: {full_response}")
+    except UnicodeEncodeError:
+        print("[MODEL]: (Response contains unicode characters that cannot be printed to this terminal)")
