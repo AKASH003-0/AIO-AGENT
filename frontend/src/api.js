@@ -7,21 +7,20 @@ export async function streamMessage(message, sessionId = "default_session", onCh
             return;
         }
 
-        // Use the most powerful Vision model for EVERYTHING to ensure he can always see.
-        const model = "llama-3.2-11b-vision-preview";
+        // Logic: Only use the Vision model if an image is actually attached.
+        // Otherwise, use the standard 8B model for maximum speed and stability.
+        const model = imageBase64 ? "llama-3.2-11b-vision-preview" : "llama3-8b-8192";
         
-        // Construct the multi-modal message properly
-        const userContent = [];
-        
-        // Add text if provided
-        userContent.push({ type: "text", text: message || "Analyze this data." });
-        
-        // Add image if provided
+        let userContent;
         if (imageBase64) {
-            userContent.push({
-                type: "image_url",
-                image_url: { url: imageBase64 }
-            });
+            // Vision format
+            userContent = [
+                { type: "text", text: message || "Describe this image." },
+                { type: "image_url", image_url: { url: imageBase64 } }
+            ];
+        } else {
+            // Standard Text format
+            userContent = message;
         }
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -41,7 +40,8 @@ export async function streamMessage(message, sessionId = "default_session", onCh
 
         if (!response.ok) {
             const errBody = await response.text();
-            onChunk(` [SERVER ERROR]: ${response.status}. Key might be invalid.`);
+            onChunk(` [ERROR]: Server rejected the request (${response.status}).`);
+            console.error("Groq Error Response:", errBody);
             return;
         }
 
