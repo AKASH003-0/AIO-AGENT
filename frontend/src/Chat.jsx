@@ -48,21 +48,35 @@ export default function Chat() {
         let currentAssistantResponse = "";
         setMessages(prev => [...prev, { role: 'assistant', content: "" }]);
 
-        await streamMessage(userMsg || "What is in this image?", "default_session", (chunk) => {
+        try {
+            await streamMessage(userMsg || "What is in this image?", "default_session", (chunk) => {
+                setThinking(false);
+                currentAssistantResponse += chunk;
+                
+                setMessages(prev => {
+                    const newMessages = [...prev];
+                    newMessages[newMessages.length - 1] = {
+                        role: 'assistant',
+                        content: currentAssistantResponse
+                    };
+                    return newMessages;
+                });
+            }, currentImage);
+        } catch (error) {
             setThinking(false);
-            currentAssistantResponse += chunk;
-            
             setMessages(prev => {
                 const newMessages = [...prev];
                 newMessages[newMessages.length - 1] = {
                     role: 'assistant',
-                    content: currentAssistantResponse
+                    content: " [SIGNAL LOST]: Connection to Jarvis Core interrupted."
                 };
                 return newMessages;
             });
-        }, currentImage);
+        }
         
+        setThinking(false); // Double safety
         setIsTyping(false);
+
 
         if (voiceEnabled) {
             const cleanText = currentAssistantResponse.replace(/!\[.*?\]\(.*?\)/g, "").trim();
