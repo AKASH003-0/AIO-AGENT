@@ -5,7 +5,7 @@ export async function streamMessage(message, sessionId = "default_session", onCh
         const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
         if (!API_KEY) {
-            onChunk(" [Error: API Key missing. Please add VITE_GROQ_API_KEY to your settings.]");
+            onChunk(" [Error: API Key missing. Please read the instructions to fix!]");
             return;
         }
 
