@@ -3,45 +3,41 @@ export async function streamMessage(message, sessionId = "default_session", onCh
         const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
         if (!API_KEY) {
-            onChunk(" [FAILED]: API Key not detected.");
+            onChunk(" [AUTH ERROR]: API Key not found in settings.");
             return;
         }
 
-        // Logic: Only use the Vision model if an image is actually attached.
-        // Otherwise, use the standard 8B model for maximum speed and stability.
-        const model = imageBase64 ? "llama-3.2-11b-vision-preview" : "llama3-8b-8192";
+        // Switching to the absolute most stable model name
+        const model = imageBase64 ? "llama-3.2-11b-vision-preview" : "llama-3.1-8b-instant";
         
         let userContent;
         if (imageBase64) {
-            // Vision format
             userContent = [
-                { type: "text", text: message || "Describe this image." },
+                { type: "text", text: message || "Analyze this." },
                 { type: "image_url", image_url: { url: imageBase64 } }
             ];
         } else {
-            // Standard Text format
-            userContent = message;
+            userContent = String(message); // Ensure it is a string
         }
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${API_KEY}`,
+                "Authorization": `Bearer ${API_KEY.trim()}`, // Trim to remove accidental spaces
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 model: model,
                 messages: [{ role: "user", content: userContent }],
                 stream: true,
-                temperature: 0.7,
-                max_tokens: 1024
+                temperature: 0.1 // Low temp for stability
             })
         });
 
         if (!response.ok) {
-            const errBody = await response.text();
-            onChunk(` [ERROR]: Server rejected the request (${response.status}).`);
-            console.error("Groq Error Response:", errBody);
+            const errBody = await response.json(); // Try to get the JSON error
+            const detailedError = errBody.error?.message || "Unknown Error";
+            onChunk(` [GROQ ERROR]: ${detailedError}`);
             return;
         }
 
@@ -67,6 +63,6 @@ export async function streamMessage(message, sessionId = "default_session", onCh
             }
         }
     } catch (err) {
-        onChunk(` [OFFLINE]: Check your internet connection.`);
+        onChunk(` [CONNECTION ERROR]: ${err.message}`);
     }
 }
