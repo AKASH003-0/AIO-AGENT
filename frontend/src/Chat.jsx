@@ -6,7 +6,6 @@ export default function Chat() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
-    const [attachedFile, setAttachedFile] = useState(null); // For PDFs/Docs
     const [isTyping, setIsTyping] = useState(false);
     const [thinking, setThinking] = useState(false);
     const [voiceEnabled, setVoiceEnabled] = useState(false);
@@ -17,74 +16,48 @@ export default function Chat() {
         endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    const handleFileUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages, isTyping, thinking]);
 
-        if (file.type.startsWith('image/')) {
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => setSelectedImage(reader.result);
-            reader.readAsDataURL(file);
-        } else if (file.type === 'application/pdf') {
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const typedarray = new Uint8Array(reader.result);
-                const pdf = await window.pdfjsLib.getDocument(typedarray).promise;
-                let fullText = "";
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    fullText += textContent.items.map(item => item.str).join(" ") + "\n";
-                }
-                setAttachedFile({ name: file.name, text: fullText });
+            reader.onloadend = () => {
+                setSelectedImage(reader.result);
             };
-            reader.readAsArrayBuffer(file);
-        } else {
-            // Assume text-based file
-            const reader = new FileReader();
-            reader.onload = () => setAttachedFile({ name: file.name, text: reader.result });
-            reader.readAsText(file);
+            reader.readAsDataURL(file);
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!input.trim() && !selectedImage && !attachedFile) return;
+        if (!input.trim() && !selectedImage) return;
         if (isTyping) return;
 
         const userMsg = input.trim();
         const currentImage = selectedImage;
-        const currentFile = attachedFile;
-        
         setInput('');
         setSelectedImage(null);
-        setAttachedFile(null);
         
-        // Construct detailed message if file is attached
-        let finalMessage = userMsg;
-        if (currentFile) {
-            finalMessage = `[File attached: ${currentFile.name}]\n\nContent:\n${currentFile.text}\n\nUser Question: ${userMsg || "Please summarize or analyze this file."}`;
-        }
-
-        setMessages(prev => [...prev, { 
-            role: 'user', 
-            content: userMsg || (currentFile ? `Shared file: ${currentFile.name}` : "Shared an image"), 
-            image: currentImage,
-            fileName: currentFile?.name
-        }]);
-
+        setMessages(prev => [...prev, { role: 'user', content: userMsg, image: currentImage }]);
         setIsTyping(true);
         setThinking(true);
 
         let currentAssistantResponse = "";
         setMessages(prev => [...prev, { role: 'assistant', content: "" }]);
 
-        await streamMessage(finalMessage, "default_session", (chunk) => {
+        await streamMessage(userMsg || "What is in this image?", "default_session", (chunk) => {
             setThinking(false);
             currentAssistantResponse += chunk;
+            
             setMessages(prev => {
                 const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = { role: 'assistant', content: currentAssistantResponse };
+                newMessages[newMessages.length - 1] = {
+                    role: 'assistant',
+                    content: currentAssistantResponse
+                };
                 return newMessages;
             });
         }, currentImage);
@@ -129,11 +102,6 @@ export default function Chat() {
                             {msg.image && (
                                 <img src={msg.image} alt="Upload" style={{ maxWidth: '100%', borderRadius: '4px', marginBottom: '10px', border: '1px solid var(--stark-blue)' }} />
                             )}
-                            {msg.fileName && !msg.image && (
-                                <div className="file-attachment-msg">
-                                    📄 {msg.fileName}
-                                </div>
-                            )}
                             {(() => {
                                 const content = msg.content || '';
                                 return content;
@@ -162,23 +130,13 @@ export default function Chat() {
                             <button onClick={() => setSelectedImage(null)}>×</button>
                         </div>
                     )}
-                    {attachedFile && (
-                        <div className="image-preview-bubble file-preview">
-                            <div className="file-icon">📄</div>
-                            <div className="file-info">
-                                <span>{attachedFile.name}</span>
-                                <small>Ready to analyze</small>
-                            </div>
-                            <button onClick={() => setAttachedFile(null)}>×</button>
-                        </div>
-                    )}
                     <div className="input-wrapper">
                         <input 
                             type="file" 
-                            accept="image/*, application/pdf, .txt, .js, .py, .html, .css" 
+                            accept="image/*" 
                             style={{ display: 'none' }} 
                             ref={fileInputRef}
-                            onChange={handleFileUpload}
+                            onChange={handleImageUpload}
                         />
                         <button 
                             type="button" 
@@ -195,7 +153,7 @@ export default function Chat() {
                             autoFocus
                             disabled={isTyping}
                         />
-                        <button type="submit" disabled={isTyping || (!input.trim() && !selectedImage && !attachedFile)}>
+                        <button type="submit" disabled={isTyping || (!input.trim() && !selectedImage)}>
                             EXECUTE
                         </button>
                     </div>
@@ -204,6 +162,3 @@ export default function Chat() {
         </div>
     );
 }
-
-
-
