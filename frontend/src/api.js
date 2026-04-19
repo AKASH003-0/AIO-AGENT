@@ -3,40 +3,40 @@ export async function streamMessage(message, sessionId = "default_session", onCh
         const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
         if (!API_KEY) {
-            onChunk(" [AUTH ERROR]: API Key not found in settings.");
+            onChunk(" [AUTH ERROR]: Key not found.");
             return;
         }
 
-        // Switching to the absolute most stable model name
-        const model = imageBase64 ? "llama-3.2-11b-vision-preview" : "llama-3.1-8b-instant";
+        // Updated Model Names (Post-Deprecation)
+        const model = imageBase64 ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile";
         
         let userContent;
         if (imageBase64) {
             userContent = [
-                { type: "text", text: message || "Analyze this." },
+                { type: "text", text: message || "Analyze." },
                 { type: "image_url", image_url: { url: imageBase64 } }
             ];
         } else {
-            userContent = String(message); // Ensure it is a string
+            userContent = String(message);
         }
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${API_KEY.trim()}`, // Trim to remove accidental spaces
+                "Authorization": `Bearer ${API_KEY.trim()}`,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 model: model,
                 messages: [{ role: "user", content: userContent }],
                 stream: true,
-                temperature: 0.1 // Low temp for stability
+                temperature: 0.1
             })
         });
 
         if (!response.ok) {
-            const errBody = await response.json(); // Try to get the JSON error
-            const detailedError = errBody.error?.message || "Unknown Error";
+            const errBody = await response.json();
+            const detailedError = errBody.error?.message || "Unknown error";
             onChunk(` [GROQ ERROR]: ${detailedError}`);
             return;
         }
