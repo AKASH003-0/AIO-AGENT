@@ -20,15 +20,32 @@ export default function Chat() {
         scrollToBottom();
     }, [messages, isTyping, thinking]);
 
+    // STARK UPGRADE: Automatic Image Compressor
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setSelectedImage(reader.result);
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                // Resize image to max 800px width for fast AI processing
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                // Convert to compressed JPG
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                setSelectedImage(compressedBase64);
             };
-            reader.readAsDataURL(file);
-        }
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = async (e) => {
@@ -49,7 +66,7 @@ export default function Chat() {
         setMessages(prev => [...prev, { role: 'assistant', content: "" }]);
 
         try {
-            await streamMessage(userMsg || "What is in this image?", "default_session", (chunk) => {
+            await streamMessage(userMsg || "Please describe this image in detail.", "default_session", (chunk) => {
                 setThinking(false);
                 currentAssistantResponse += chunk;
                 
@@ -68,24 +85,14 @@ export default function Chat() {
                 const newMessages = [...prev];
                 newMessages[newMessages.length - 1] = {
                     role: 'assistant',
-                    content: " [SIGNAL LOST]: Connection to Jarvis Core interrupted."
+                    content: " [SIGNAL ERROR]: Neural link failed. Check your API settings."
                 };
                 return newMessages;
             });
         }
         
-        setThinking(false); // Double safety
+        setThinking(false);
         setIsTyping(false);
-
-
-        if (voiceEnabled) {
-            const cleanText = currentAssistantResponse.replace(/!\[.*?\]\(.*?\)/g, "").trim();
-            if (cleanText) {
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.rate = 1.05;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
     };
 
     return (
@@ -116,10 +123,7 @@ export default function Chat() {
                             {msg.image && (
                                 <img src={msg.image} alt="Upload" style={{ maxWidth: '100%', borderRadius: '4px', marginBottom: '10px', border: '1px solid var(--stark-blue)' }} />
                             )}
-                            {(() => {
-                                const content = msg.content || '';
-                                return content;
-                            })()}
+                            <div className="text-content">{msg.content}</div>
                             {msg.role === 'assistant' && isTyping && idx === messages.length - 1 && !thinking && (
                                 <span className="blinking-cursor"></span>
                             )}
