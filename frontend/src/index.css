@@ -194,6 +194,114 @@ body {
   z-index: 100;
 }
 
+.upload-btn {
+  background: transparent;
+  border: 1px solid var(--stark-blue);
+  color: var(--stark-blue);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin-right: 0.5rem;
+  transition: all 0.2s;
+}
+
+.upload-btn:hover {
+  background: var(--stark-blue);
+  color: var(--stark-bg);
+  box-shadow: 0 0 10px var(--stark-blue);
+}
+
+.image-preview-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 2rem;
+  margin-bottom: 1rem;
+  background: var(--stark-glass);
+  border: var(--border-hud);
+  padding: 0.5rem;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  animation: slide-up 0.3s ease-out;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.image-preview-bubble img {
+  max-width: 100px;
+  max-height: 100px;
+  border-radius: 4px;
+  border: 1px solid var(--stark-blue);
+}
+
+.image-preview-bubble button {
+  background: var(--stark-blue);
+  border: none;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.image-preview-bubble.file-preview {
+  padding: 0.8rem 1.2rem;
+  display: flex;
+  align-items: center;
+  min-width: 200px;
+}
+
+.file-icon {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.file-info span {
+  font-size: 0.85rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.file-info small {
+  font-size: 0.65rem;
+  color: var(--stark-blue);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.file-attachment-msg {
+  background: rgba(14, 165, 233, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px dashed var(--stark-blue);
+  margin-bottom: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--stark-blue);
+}
+
 .input-wrapper {
   display: flex;
   background: var(--stark-glass);

@@ -1,12 +1,21 @@
-// This version talks DIRECTLY to Groq, no backend needed!
-export async function streamMessage(message, sessionId = "default_session", onChunk) {
+// This version supports VISION (Images) and Text
+export async function streamMessage(message, sessionId = "default_session", onChunk, imageBase64 = null) {
     try {
-        // Safe: This looks for your key in Netlify/Local settings
         const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
         if (!API_KEY) {
-            onChunk(" [Error: API Key missing. Please read the instructions to fix!]");
+            onChunk(" [Error: API Key missing. Please add VITE_GROQ_API_KEY to your settings.]");
             return;
+        }
+
+        // Construct the multi-modal message
+        const content = [{ type: "text", text: message }];
+        
+        if (imageBase64) {
+            content.push({
+                type: "image_url",
+                image_url: { url: imageBase64 }
+            });
         }
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -16,8 +25,8 @@ export async function streamMessage(message, sessionId = "default_session", onCh
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "llama-3.1-8b-instant",
-                messages: [{ role: "user", content: message }],
+                model: "llama-3.2-11b-vision-preview", // Vision-capable model
+                messages: [{ role: "user", content: content }],
                 stream: true
             })
         });
@@ -48,4 +57,3 @@ export async function streamMessage(message, sessionId = "default_session", onCh
         onChunk(" [Connection error. Check your Internet.]");
     }
 }
-
