@@ -3,22 +3,25 @@ export async function streamMessage(message, sessionId = "default_session", onCh
         const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
         if (!API_KEY) {
-            onChunk(" [FAILED]: API Key not detected in environment.");
+            onChunk(" [FAILED]: API Key not detected.");
             return;
         }
 
-        // 1. Determine which model to use
-        // Use Vision model ONLY if there is an image, otherwise use the lighting-fast 8B model.
-        const model = imageBase64 ? "llama-3.2-11b-vision-preview" : "llama-3.1-8b-instant";
+        // Use the most powerful Vision model for EVERYTHING to ensure he can always see.
+        const model = "llama-3.2-11b-vision-preview";
         
-        let content;
+        // Construct the multi-modal message properly
+        const userContent = [];
+        
+        // Add text if provided
+        userContent.push({ type: "text", text: message || "Analyze this data." });
+        
+        // Add image if provided
         if (imageBase64) {
-             content = [
-                { type: "text", text: message || "Analyze this image." },
-                { type: "image_url", image_url: { url: imageBase64 } }
-             ];
-        } else {
-             content = message;
+            userContent.push({
+                type: "image_url",
+                image_url: { url: imageBase64 }
+            });
         }
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -29,15 +32,16 @@ export async function streamMessage(message, sessionId = "default_session", onCh
             },
             body: JSON.stringify({
                 model: model,
-                messages: [{ role: "user", content: content }],
-                stream: true
+                messages: [{ role: "user", content: userContent }],
+                stream: true,
+                temperature: 0.7,
+                max_tokens: 1024
             })
         });
 
         if (!response.ok) {
             const errBody = await response.text();
-            onChunk(` [SERVER ERROR]: ${response.status} - Check if Groq has vision access.`);
-            console.error("Groq Error:", errBody);
+            onChunk(` [SERVER ERROR]: ${response.status}. Key might be invalid.`);
             return;
         }
 
@@ -63,7 +67,6 @@ export async function streamMessage(message, sessionId = "default_session", onCh
             }
         }
     } catch (err) {
-        console.error("CRITICAL CONNECTION ERROR:", err);
-        onChunk(` [OFFLINE]: ${err.message}`);
+        onChunk(` [OFFLINE]: Check your internet connection.`);
     }
 }
