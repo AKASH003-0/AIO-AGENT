@@ -69,27 +69,26 @@ export default function Chat() {
         <div className="chat-container">
             <header className="chat-header">
                 <div className="status-indicator online"></div>
-                <h1>AI Workspace</h1>
+                <h1>Jarvis Core</h1>
                 <button 
-                    style={{ marginLeft: 'auto', padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
                     onClick={() => {
                         setVoiceEnabled(!voiceEnabled);
                         if (voiceEnabled) window.speechSynthesis.cancel();
                     }}
                 >
-                    {voiceEnabled ? 'VOICE ON' : 'VOICE OFF'}
+                    {voiceEnabled ? 'Neural Audio [ON]' : 'Neural Audio [OFF]'}
                 </button>
             </header>
             
             <div className="chat-log">
                 {messages.length === 0 && (
                     <div className="message system">
-                        How can I assist you today?
+                        SYSTEM READY. STANDING BY FOR COMMANDS.
                     </div>
                 )}
                 {messages.map((msg, idx) => (
                     <div key={idx} className={`message ${msg.role}`}>
-                        <div className="avatar">{msg.role === 'user' ? 'USR' : 'SYS'}</div>
+                        <div className="avatar">{msg.role === 'user' ? 'STARK' : 'J.A.R.V.I.S'}</div>
                         <div className="content">
                             {(() => {
                                 const content = msg.content || '';
@@ -113,7 +112,7 @@ export default function Chat() {
                             })()}
                             {/* Blinking cursor attachment */}
                             {msg.role === 'assistant' && isTyping && idx === messages.length - 1 && !thinking && (
-                                <span className="blinking-cursor">|</span>
+                                <span className="blinking-cursor"></span>
                             )}
                         </div>
                     </div>
@@ -122,8 +121,8 @@ export default function Chat() {
                 {/* Advanced "Thinking" UI State */}
                 {thinking && (
                     <div className="message assistant thinking">
-                        <div className="avatar">SYS</div>
-                        <div className="content">Processing intent...</div>
+                        <div className="avatar">J.A.R.V.I.S</div>
+                        <div className="content">ROUTING NEURAL PATHWAYS...</div>
                     </div>
                 )}
                 <div ref={endOfMessagesRef} />
@@ -136,12 +135,12 @@ export default function Chat() {
                             type="text" 
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Type your message here..."
+                            placeholder="INITIALIZE COMMAND SEQUENCE..."
                             autoFocus
                             disabled={isTyping}
                         />
                         <button type="submit" disabled={isTyping || !input.trim()}>
-                            Send
+                            EXECUTE
                         </button>
                     </div>
                 </div>
@@ -149,3 +148,4 @@ export default function Chat() {
         </div>
     );
 }
+
